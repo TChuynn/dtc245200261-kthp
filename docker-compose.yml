@@ -27,6 +27,8 @@ services:
       - CHOWN
       - DAC_OVERRIDE
       - FOWNER
+    mem_limit: 64m
+    cpus: 0.25
 
   # 2. Cơ sở dữ liệu MySQL 8.4 LTS
   mysql:
@@ -61,6 +63,8 @@ services:
       start_period: 20s
     security_opt:
       - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 1.0
 
   # 3. Ứng dụng Node.js Express + EJS (Multi-stage, Non-root)
   app:
@@ -100,6 +104,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    mem_limit: 256m
+    cpus: 0.5
 
   # 4. Nginx Reverse Proxy (Non-root, HTTPS, Security Headers, Rate Limit)
   nginx:
@@ -138,6 +144,8 @@ services:
     # Bổ sung NET_BIND_SERVICE để user non-root (nginx) có quyền mở cổng 80 và 443
     cap_add:
       - NET_BIND_SERVICE
+    mem_limit: 128m
+    cpus: 0.5
 
   # 5. phpMyAdmin (Quản trị CSDL cục bộ)
   phpmyadmin:
@@ -159,6 +167,8 @@ services:
       - pma_bridge
     security_opt:
       - no-new-privileges:true
+    mem_limit: 128m
+    cpus: 0.5
 
   # 6. Exporter thu thập metrics MySQL (Quyền tối thiểu)
   mysqld-exporter:
@@ -193,6 +203,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    mem_limit: 64m
+    cpus: 0.25
 
   # 7. Exporter thu thập stub_status từ Nginx
   nginx-exporter:
@@ -211,6 +223,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    mem_limit: 64m
+    cpus: 0.25
 
   # 8. cAdvisor thu thập tài nguyên container (CPU, RAM, Network)
   cadvisor:
@@ -238,6 +252,8 @@ services:
       start_period: 15s
     security_opt:
       - no-new-privileges:true
+    mem_limit: 256m
+    cpus: 0.5
 
   # 9. Prometheus thu thập và lưu trữ metrics (Retention 7 ngày, Non-root)
   prometheus:
@@ -279,6 +295,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    mem_limit: 512m
+    cpus: 0.5
 
   # 10. Grafana hiển thị trực quan hóa Dashboard (Provisioning tự động, Non-root)
   grafana:
@@ -301,6 +319,8 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
+      loki:
+        condition: service_healthy
     networks:
       - monitoring
     healthcheck:
@@ -311,6 +331,58 @@ services:
       start_period: 15s
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    cpus: 1.0
+
+  # 11. Loki - Hệ thống thu thập và lưu trữ Log tập trung (Single-binary, Filesystem, Non-root)
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: diemdanh_loki
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    networks:
+      - monitoring
+    # Không publish cổng ra host (Grafana truy cập qua mạng nội bộ)
+    healthcheck:
+      test: ["CMD-SHELL", "/busybox/wget -q --spider http://127.0.0.1:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 256m
+    cpus: 0.5
+
+  # 12. Promtail - Thu thập log container từ Docker socket và đẩy về Loki
+  promtail:
+    image: grafana/promtail:3.4.2
+    container_name: diemdanh_promtail
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - monitoring
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+    cpus: 0.25
 
 networks:
   frontend:
@@ -333,4 +405,6 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  loki_data:
     driver: local

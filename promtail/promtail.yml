@@ -1,0 +1,34 @@
+# Cấu hình Promtail thu thập log từ Docker daemon qua docker_sd_configs
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # 1. Gán cố định nhãn job="docker"
+      - target_label: job
+        replacement: docker
+
+      # 2. Gán nhãn service lấy từ tên compose service (ví dụ: app, nginx, mysql)
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: service
+
+      # 3. Gán nhãn container lấy từ container name (loại bỏ dấu gạch chéo đầu tên)
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/?(.*)'
+        target_label: container
+
+      # 4. Giữ đúng 3 nhãn duy nhất: job, service, container (loại bỏ nhãn thừa)
+      - regex: '^(job|service|container)$'
+        action: labelkeep

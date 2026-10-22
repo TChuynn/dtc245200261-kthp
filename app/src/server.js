@@ -158,8 +158,47 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 16. Khởi động máy chủ sau khi kiểm tra CSDL
+// 16. Kiểm tra độ mạnh mật khẩu quản trị viên khởi tạo (Hardening)
+function validateAdminPassword() {
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const samplePasswords = [
+    'mat_khau_admin_khoi_tao',
+    'sinh_bang_lenh_openssl_rand_base64_24',
+    'your-password-here',
+    'admin',
+    'admin123',
+    'password',
+    '123456',
+    '12345678',
+    'changeme',
+    'root',
+  ];
+
+  if (!adminPassword || samplePasswords.includes(adminPassword)) {
+    logger.error('security_validation_failed', {
+      message: 'Mật khẩu SEED_ADMIN_PASSWORD đang sử dụng giá trị mẫu hoặc bị bỏ trống. Ứng dụng từ chối khởi động để đảm bảo an toàn.',
+    });
+    process.exit(1);
+  }
+
+  // Yêu cầu: tối thiểu 12 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt
+  const hasMinLength = adminPassword.length >= 12;
+  const hasUpperCase = /[A-Z]/.test(adminPassword);
+  const hasLowerCase = /[a-z]/.test(adminPassword);
+  const hasNumber = /[0-9]/.test(adminPassword);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(adminPassword);
+
+  if (!hasMinLength || !hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecial) {
+    logger.error('security_validation_failed', {
+      message: 'Mật khẩu SEED_ADMIN_PASSWORD quá yếu (yêu cầu tối thiểu 12 ký tự, đủ chữ hoa, thường, số và ký tự đặc biệt). Ứng dụng từ chối khởi động.',
+    });
+    process.exit(1);
+  }
+}
+
+// 17. Khởi động máy chủ sau khi kiểm tra an ninh và CSDL
 async function startServer() {
+  validateAdminPassword();
   await initDb();
   app.listen(PORT, '0.0.0.0', () => {
     logger.info('server_started', {
@@ -173,3 +212,4 @@ startServer().catch((err) => {
   logger.error('server_boot_error', { message: err.message });
   process.exit(1);
 });
+
