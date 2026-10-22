@@ -1,0 +1,77 @@
+<%- include('../partials/header') %>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.5rem; font-weight: 700;">Báo Cáo Điểm Danh Tháng: <%= month %></h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Tổng hợp số ca làm việc, số lần đi muộn và tổng thời lượng làm việc của nhân viên.</p>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+    <form method="GET" action="/admin/reports" style="display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+      <label for="month" class="form-label" style="margin: 0; white-space: nowrap;">Tháng:</label>
+      <input type="month" id="month" name="month" value="<%= month %>" class="form-control" style="width: auto; padding: 0.45rem 0.75rem;">
+      <button type="submit" class="btn btn-secondary btn-sm">Xem</button>
+    </form>
+
+    <a href="/admin/reports/export-csv?month=<%= month %>" class="btn btn-primary btn-sm">
+      📥 Xuất Báo Cáo CSV
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Mã NV</th>
+          <th>Tên Đăng Nhập</th>
+          <th>Họ và Tên</th>
+          <th>Trạng Thái Tài Khoản</th>
+          <th style="text-align: center;">Số Ca Phân Công</th>
+          <th style="text-align: center;">Số Ca Đã Làm</th>
+          <th style="text-align: center;">Số Lần Đi Muộn</th>
+          <th style="text-align: right;">Tổng Giờ Làm (giờ)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (reports.length === 0) { %>
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Chưa có dữ liệu nhân viên nào trong hệ thống.
+            </td>
+          </tr>
+        <% } else { %>
+          <% reports.forEach(function(r) { %>
+            <tr>
+              <td><%= r.user_id %></td>
+              <td><code><%= r.username %></code></td>
+              <td><strong><%= r.full_name %></strong></td>
+              <td>
+                <% if (r.is_active === 1) { %>
+                  <span class="badge badge-active">Hoạt động</span>
+                <% } else { %>
+                  <span class="badge badge-locked">Đã khóa</span>
+                <% } %>
+              </td>
+              <td style="text-align: center;"><%= r.total_assigned_shifts %></td>
+              <td style="text-align: center;"><strong><%= r.total_attended_shifts %></strong></td>
+              <td style="text-align: center;">
+                <% if (r.late_count > 0) { %>
+                  <span class="badge badge-late"><%= r.late_count %> lần</span>
+                <% } else { %>
+                  <span style="color: var(--text-muted);">0</span>
+                <% } %>
+              </td>
+              <td style="text-align: right; font-weight: 600; color: var(--primary);">
+                <%= r.total_working_hours %> h
+              </td>
+            </tr>
+          <% }); %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

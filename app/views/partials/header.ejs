@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'Hệ Thống Điểm Danh' %></title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="nav-brand">
+      <span>🏢 Điểm Danh Nhân Viên</span>
+      <% if (currentUser) { %>
+        <span class="badge-role"><%= currentUser.role === 'admin' ? 'Quản Trị' : 'Nhân Viên' %></span>
+      <% } %>
+    </a>
+
+    <% if (currentUser) { %>
+      <nav>
+        <ul class="nav-links">
+          <% if (currentUser.role === 'admin') { %>
+            <li><a href="/admin/reports" class="<%= currentPath.startsWith('/admin/reports') ? 'active' : '' %>">Báo Cáo Tháng</a></li>
+            <li><a href="/admin/assignments" class="<%= currentPath.startsWith('/admin/assignments') ? 'active' : '' %>">Phân Ca</a></li>
+            <li><a href="/admin/shifts" class="<%= currentPath.startsWith('/admin/shifts') ? 'active' : '' %>">Ca Làm Việc</a></li>
+            <li><a href="/admin/users" class="<%= currentPath.startsWith('/admin/users') ? 'active' : '' %>">Nhân Viên</a></li>
+          <% } else { %>
+            <li><a href="/staff/dashboard" class="<%= currentPath === '/staff/dashboard' ? 'active' : '' %>">Hôm Nay</a></li>
+            <li><a href="/staff/history" class="<%= currentPath.startsWith('/staff/history') ? 'active' : '' %>">Lịch Sử Cá Nhân</a></li>
+          <% } %>
+        </ul>
+      </nav>
+
+      <div class="nav-user">
+        <span class="user-info">Xin chào, <strong><%= currentUser.full_name %></strong></span>
+        <form action="/logout" method="POST" style="margin: 0; display: inline;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="btn btn-secondary btn-sm">Đăng Xuất</button>
+        </form>
+      </div>
+    <% } %>
+  </header>
+  <main class="container">

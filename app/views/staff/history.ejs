@@ -1,0 +1,79 @@
+<%- include('../partials/header') %>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.5rem; font-weight: 700;">Lịch Sử Điểm Danh Cá Nhân</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Xem chi tiết các lượt điểm danh và số giờ làm việc theo tháng.</p>
+  </div>
+
+  <form method="GET" action="/staff/history" style="display: flex; align-items: center; gap: 0.5rem;">
+    <label for="month" class="form-label" style="margin: 0; white-space: nowrap;">Chọn Tháng:</label>
+    <input type="month" id="month" name="month" value="<%= month %>" class="form-control" style="width: auto; padding: 0.45rem 0.75rem;">
+    <button type="submit" class="btn btn-secondary btn-sm">Xem</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Dữ Liệu Tháng: <%= month %> (<%= totalCount %> bản ghi)</h2>
+  </div>
+
+  <% if (logs.length === 0) { %>
+    <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+      <p style="font-size: 1.05rem;">Không có dữ liệu điểm danh nào trong tháng <%= month %>.</p>
+    </div>
+  <% } else { %>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Ngày Làm Việc</th>
+            <th>Ca Làm Việc</th>
+            <th>Giờ Vào (Check-in)</th>
+            <th>Giờ Ra (Check-out)</th>
+            <th>Thời Lượng (giờ)</th>
+            <th>Trạng Thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% logs.forEach(function(item) { %>
+            <tr>
+              <td><strong><%= item.attendance_date %></strong></td>
+              <td><%= item.shift_name %> (<%= item.start_time.slice(0, 5) %> - <%= item.end_time.slice(0, 5) %>)</td>
+              <td><%= item.check_in ? item.check_in.slice(11, 19) : '---' %></td>
+              <td><%= item.check_out ? item.check_out.slice(11, 19) : 'Chưa check-out' %></td>
+              <td><%= item.duration_hours > 0 ? item.duration_hours + ' h' : '---' %></td>
+              <td>
+                <% if (item.status === 'on_time') { %>
+                  <span class="badge badge-on_time">Đúng giờ</span>
+                <% } else { %>
+                  <span class="badge badge-late">Đi muộn</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (totalPages > 1) { %>
+      <div class="pagination">
+        <% if (page > 1) { %>
+          <a href="/staff/history?month=<%= month %>&page=<%= page - 1 %>">&laquo; Trang trước</a>
+        <% } else { %>
+          <span class="disabled">&laquo; Trang trước</span>
+        <% } %>
+
+        <span class="active">Trang <%= page %> / <%= totalPages %></span>
+
+        <% if (page < totalPages) { %>
+          <a href="/staff/history?month=<%= month %>&page=<%= page + 1 %>">Trang sau &raquo;</a>
+        <% } else { %>
+          <span class="disabled">Trang sau &raquo;</span>
+        <% } %>
+      </div>
+    <% } %>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,137 @@
+<%- include('../partials/header') %>
+
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.5rem; font-weight: 700;">Quản Lý Tài Khoản Nhân Viên</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Tạo mới tài khoản nhân viên hoặc khóa/mở khóa quyền truy cập hệ thống.</p>
+</div>
+
+<% if (success) { %>
+  <div class="alert alert-success">
+    <span>✅ <%= success %></span>
+  </div>
+<% } %>
+
+<% if (error) { %>
+  <div class="alert alert-error">
+    <span>⚠️ <%= error %></span>
+  </div>
+<% } %>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start;">
+  <!-- Form tạo nhân viên mới -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Thêm Nhân Viên Mới</h2>
+    </div>
+
+    <form action="/admin/users" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label for="username" class="form-label">Tên đăng nhập (username)</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          class="form-control" 
+          required 
+          placeholder="staff11"
+        >
+        <small style="color: var(--text-muted); font-size: 0.8rem;">Từ 3-30 ký tự (chữ thường, số, _)</small>
+      </div>
+
+      <div class="form-group">
+        <label for="full_name" class="form-label">Họ và tên nhân viên</label>
+        <input 
+          type="text" 
+          id="full_name" 
+          name="full_name" 
+          class="form-control" 
+          required 
+          placeholder="Nguyễn Văn B"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Mật khẩu khởi tạo</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          class="form-control" 
+          required 
+          placeholder="Tối thiểu 6 ký tự"
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+        + Tạo Tài Khoản
+      </button>
+    </form>
+  </div>
+
+  <!-- Bảng danh sách người dùng -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Danh Sách Người Dùng Trong Hệ Thống</h2>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tên Đăng Nhập</th>
+            <th>Họ và Tên</th>
+            <th>Vai Trò</th>
+            <th>Trạng Thái</th>
+            <th style="text-align: right;">Thao Tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(function(u) { %>
+            <tr>
+              <td><%= u.id %></td>
+              <td><code><%= u.username %></code></td>
+              <td><strong><%= u.full_name %></strong></td>
+              <td>
+                <span class="badge" style="background: <%= u.role === 'admin' ? '#e0e7ff' : '#f1f5f9' %>; color: <%= u.role === 'admin' ? '#4338ca' : '#475569' %>;">
+                  <%= u.role === 'admin' ? 'Quản Trị' : 'Nhân Viên' %>
+                </span>
+              </td>
+              <td>
+                <% if (u.is_active === 1) { %>
+                  <span class="badge badge-active">Hoạt động</span>
+                <% } else { %>
+                  <span class="badge badge-locked">Đã khóa</span>
+                <% } %>
+              </td>
+              <td style="text-align: right;">
+                <% if (u.id !== currentUser.id && u.role !== 'admin') { %>
+                  <form action="/admin/users/<%= u.id %>/toggle" method="POST" style="margin: 0; display: inline;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <% if (u.is_active === 1) { %>
+                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Bạn có chắc chắn muốn KHÓA tài khoản này?');">
+                        Khóa
+                      </button>
+                    <% } else { %>
+                      <button type="submit" class="btn btn-secondary btn-sm">
+                        Mở Khóa
+                      </button>
+                    <% } %>
+                  </form>
+                <% } else if (u.id === currentUser.id) { %>
+                  <span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">(Chính bạn)</span>
+                <% } else { %>
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">---</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

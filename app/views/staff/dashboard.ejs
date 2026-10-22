@@ -1,0 +1,103 @@
+<%- include('../partials/header') %>
+
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.5rem; font-weight: 700;">Hôm Nay: <%= todayStr %></h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Giờ hệ thống hiện tại: <strong><%= nowTimeStr %></strong> (Múi giờ Asia/Ho_Chi_Minh)</p>
+  </div>
+  <a href="/staff/history" class="btn btn-secondary">Xem Lịch Sử Cá Nhân &rarr;</a>
+</div>
+
+<% if (success) { %>
+  <div class="alert alert-success">
+    <span>✅ <%= success %></span>
+  </div>
+<% } %>
+
+<% if (error) { %>
+  <div class="alert alert-error">
+    <span>⚠️ <%= error %></span>
+  </div>
+<% } %>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Ca Làm Việc Phân Công Cho Bạn Hôm Nay</h2>
+  </div>
+
+  <% if (assignments.length === 0) { %>
+    <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+      <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">🏖️ Hôm nay bạn không có lịch phân ca làm việc nào.</p>
+      <p style="font-size: 0.85rem;">Nếu có thắc mắc, vui lòng liên hệ Quản lý phân ca của bạn.</p>
+    </div>
+  <% } else { %>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tên Ca</th>
+            <th>Khung Giờ</th>
+            <th>Giờ Check-in</th>
+            <th>Giờ Check-out</th>
+            <th>Trạng Thái</th>
+            <th style="text-align: right;">Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% assignments.forEach(function(item) { %>
+            <tr>
+              <td><strong><%= item.shift_name %></strong></td>
+              <td><%= item.start_time.slice(0, 5) %> &mdash; <%= item.end_time.slice(0, 5) %></td>
+              <td><%= item.check_in ? item.check_in.slice(11, 19) : 'Chưa điểm danh' %></td>
+              <td><%= item.check_out ? item.check_out.slice(11, 19) : (item.check_in ? 'Chưa kết thúc' : '---') %></td>
+              <td>
+                <% if (!item.check_in) { %>
+                  <span class="badge" style="background: #f1f5f9; color: #475569;">Chưa vào ca</span>
+                <% } else if (item.status === 'on_time') { %>
+                  <span class="badge badge-on_time">Đúng giờ</span>
+                <% } else { %>
+                  <span class="badge badge-late">Đi muộn</span>
+                <% } %>
+              </td>
+              <td style="text-align: right;">
+                <% if (!item.check_in) { %>
+                  <form action="/staff/check-in" method="POST" style="margin: 0; display: inline;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="assignment_id" value="<%= item.assignment_id %>">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      Điểm Danh Vào (Check-in)
+                    </button>
+                  </form>
+                <% } else if (!item.check_out) { %>
+                  <form action="/staff/check-out" method="POST" style="margin: 0; display: inline;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="assignment_id" value="<%= item.assignment_id %>">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                      Điểm Danh Ra (Check-out)
+                    </button>
+                  </form>
+                <% } else { %>
+                  <span style="color: var(--success); font-weight: 500; font-size: 0.85rem;">
+                    ✓ Đã hoàn thành ca
+                  </span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<div class="card" style="background-color: #f8fafc; border-style: dashed;">
+  <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main);">📌 Quy định điểm danh:</h3>
+  <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.25rem; line-height: 1.6;">
+    <li>Cho phép điểm danh vào (check-in) từ <strong>30 phút trước</strong> giờ bắt đầu ca cho đến khi kết thúc ca.</li>
+    <li>Check-in sau giờ bắt đầu ca <strong>hơn 10 phút</strong> sẽ tự động tính là <strong>"Đi muộn"</strong>.</li>
+    <li>Điểm danh ra (check-out) bắt buộc phải sau thời điểm check-in.</li>
+    <li>Mỗi ca làm việc được phân công trong ngày chỉ được phép điểm danh một lần duy nhất.</li>
+  </ul>
+</div>
+
+<%- include('../partials/footer') %>

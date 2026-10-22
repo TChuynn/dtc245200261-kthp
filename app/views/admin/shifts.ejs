@@ -1,0 +1,110 @@
+<%- include('../partials/header') %>
+
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.5rem; font-weight: 700;">Quản Lý Ca Làm Việc</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Định nghĩa các khung ca làm việc chuẩn trong ngày.</p>
+</div>
+
+<% if (success) { %>
+  <div class="alert alert-success">
+    <span>✅ <%= success %></span>
+  </div>
+<% } %>
+
+<% if (error) { %>
+  <div class="alert alert-error">
+    <span>⚠️ <%= error %></span>
+  </div>
+<% } %>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start;">
+  <!-- Form tạo ca làm việc mới -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Thêm Ca Làm Mới</h2>
+    </div>
+
+    <form action="/admin/shifts" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label for="name" class="form-label">Tên ca làm việc</label>
+        <input 
+          type="text" 
+          id="name" 
+          name="name" 
+          class="form-control" 
+          required 
+          placeholder="Ví dụ: Ca Đêm"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="start_time" class="form-label">Giờ bắt đầu</label>
+        <input 
+          type="time" 
+          id="start_time" 
+          name="start_time" 
+          class="form-control" 
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="end_time" class="form-label">Giờ kết thúc</label>
+        <input 
+          type="time" 
+          id="end_time" 
+          name="end_time" 
+          class="form-control" 
+          required
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+        + Tạo Ca Làm Việc
+      </button>
+    </form>
+  </div>
+
+  <!-- Bảng danh sách các ca -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Các Ca Làm Hiện Có</h2>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tên Ca</th>
+            <th>Giờ Bắt Đầu</th>
+            <th>Giờ Kết Thúc</th>
+            <th>Thời Lượng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% shifts.forEach(function(s) { %>
+            <tr>
+              <td><%= s.id %></td>
+              <td><strong><%= s.name %></strong></td>
+              <td><code><%= s.start_time.slice(0, 5) %></code></td>
+              <td><code><%= s.end_time.slice(0, 5) %></code></td>
+              <td>
+                <% 
+                  const [sh, sm] = s.start_time.split(':').map(Number);
+                  const [eh, em] = s.end_time.split(':').map(Number);
+                  const durHours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+                %>
+                <%= durHours > 0 ? durHours + ' giờ' : '---' %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
