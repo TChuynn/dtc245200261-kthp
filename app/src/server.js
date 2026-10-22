@@ -5,6 +5,7 @@ const path = require('path');
 const logger = require('./logger');
 const { healthCheck, initDb } = require('./db');
 const csrfMiddleware = require('./middleware/csrf');
+const { promClient, metricsMiddleware } = require('./metrics');
 
 const authRoutes = require('./routes/auth');
 const staffRoutes = require('./routes/staff');
@@ -12,6 +13,9 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
+
+// Tắt header x-powered-by để tránh lộ thông tin công nghệ
+app.disable('x-powered-by');
 
 // 1. Cấu hình Trust Proxy (đứng sau Nginx Reverse Proxy)
 app.set('trust proxy', 1);
@@ -23,12 +27,25 @@ app.set('views', path.join(__dirname, '../views'));
 // 3. Phục vụ tài nguyên tĩnh (CSS, hình ảnh)
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
-// 4. Phân tích dữ liệu Request Body và Cookie
+// 4. Endpoint Prometheus metrics nội bộ (đặt trước CSRF để scrape không bị chặn)
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await promClient.register.metrics());
+  } catch (err) {
+    res.status(500).end(err.message);
+  }
+});
+
+// 5. Middleware đo lường HTTP metrics
+app.use(metricsMiddleware);
+
+// 6. Phân tích dữ liệu Request Body và Cookie
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
-// 5. Cấu hình Session Cookie bảo mật
+// 7. Cấu hình Session Cookie bảo mật
 const isProduction = process.env.NODE_ENV === 'production';
 app.use(
   session({
@@ -45,12 +62,12 @@ app.use(
   })
 );
 
-// 6. Middleware ghi log HTTP Request dạng JSON đơn dòng ra stdout
+// 8. Middleware ghi log HTTP Request dạng JSON đơn dòng ra stdout
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    // Không ghi log định kỳ cho /healthz để tránh làm đầy log hệ thống
-    if (req.path === '/healthz') return;
+    // Không ghi log định kỳ cho /healthz và /metrics để tránh làm đầy log hệ thống
+    if (req.path === '/healthz' || req.path === '/metrics') return;
 
     const duration_ms = Date.now() - start;
     const status = res.statusCode;
@@ -73,17 +90,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// 7. Middleware chống CSRF
+// 9. Middleware chống CSRF
 app.use(csrfMiddleware);
 
-// 8. Cung cấp thông tin user hiện tại cho mọi View
+// 10. Cung cấp thông tin user hiện tại cho mọi View
 app.use((req, res, next) => {
   res.locals.currentUser = req.session ? req.session.user : null;
   res.locals.currentPath = req.path;
   next();
 });
 
-// 9. Endpoint kiểm tra sức khỏe hệ thống (Health Check)
+// 11. Endpoint kiểm tra sức khỏe hệ thống (Health Check)
 app.get('/healthz', async (req, res) => {
   try {
     const isDbHealthy = await healthCheck();
@@ -96,7 +113,7 @@ app.get('/healthz', async (req, res) => {
   }
 });
 
-// 10. Định tuyến chính
+// 12. Định tuyến chính
 app.get('/', (req, res) => {
   if (!req.session || !req.session.user) {
     return res.redirect('/login');
@@ -107,12 +124,12 @@ app.get('/', (req, res) => {
   return res.redirect('/staff/dashboard');
 });
 
-// 11. Các router chức năng
+// 13. Các router chức năng
 app.use(authRoutes);
 app.use('/staff', staffRoutes);
 app.use('/admin', adminRoutes);
 
-// 12. Xử lý lỗi 404 (Không tìm thấy trang)
+// 14. Xử lý lỗi 404 (Không tìm thấy trang)
 app.use((req, res) => {
   res.status(404).render('error', {
     title: '404 - Không Tìm Thấy Trang',
@@ -121,7 +138,7 @@ app.use((req, res) => {
   });
 });
 
-// 13. Xử lý lỗi 500 (Ẩn chi tiết lỗi nội bộ để đảm bảo an toàn)
+// 15. Xử lý lỗi 500 (Ẩn chi tiết lỗi nội bộ để đảm bảo an toàn)
 app.use((err, req, res, next) => {
   const userId = req.session && req.session.user ? req.session.user.id : null;
   logger.error('internal_error', {
@@ -141,13 +158,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 14. Khởi động máy chủ sau khi kiểm tra CSDL
+// 16. Khởi động máy chủ sau khi kiểm tra CSDL
 async function startServer() {
   await initDb();
   app.listen(PORT, '0.0.0.0', () => {
     logger.info('server_started', {
       message: `Máy chủ điểm danh Node.js đang chạy tại cổng ${PORT}`,
-      meta: { port: PORT, env: process.env.NODE_ENV || 'development' },
+      meta: { port: PORT, env: process.env.NODE_ENV || 'production' },
     });
   });
 }

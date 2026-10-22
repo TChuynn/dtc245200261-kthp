@@ -9,6 +9,7 @@ const {
   timeStringToMinutes,
   getCurrentMinutesVietnam,
 } = require('../utils/time');
+const { attendanceCheckinsTotal } = require('../metrics');
 
 const router = express.Router();
 
@@ -122,6 +123,9 @@ router.post('/check-in', async (req, res, next) => {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [assignment.id, userId, assignment.shift_id, todayStr, nowDateTime, status]
     );
+
+    // Ghi nhận metric nghiệp vụ check-in theo trạng thái on_time/late
+    attendanceCheckinsTotal.inc({ status });
 
     logger.info('check_in', {
       user_id: userId,

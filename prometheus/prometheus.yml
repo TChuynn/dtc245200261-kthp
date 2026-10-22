@@ -1,0 +1,35 @@
+# Cấu hình Prometheus thu thập metrics định kỳ
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+  scrape_timeout: 5s
+
+scrape_configs:
+  # 1. Tự giám sát tiến trình Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Thu thập metrics từ ứng dụng Node.js (prom-client)
+  - job_name: 'app'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['app:3000']
+
+  # 3. Thu thập metrics từ Nginx Exporter
+  - job_name: 'nginx-exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+  # 4. Thu thập metrics từ MySQL Exporter
+  - job_name: 'mysqld-exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['mysqld-exporter:9104']
+
+  # 5. Thu thập metrics từ cAdvisor (Tài nguyên container)
+  - job_name: 'cadvisor'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['cadvisor:8080']
